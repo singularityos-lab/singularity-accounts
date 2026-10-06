@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=dev.sinty.Accounts
+Exec=@libexecdir@/singularity-accounts

@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=dev.sinty.CloudMount
+Exec=@libexecdir@/singularity-cloud-mount

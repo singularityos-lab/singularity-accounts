@@ -1,0 +1,23 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<radialGradient id="ls_vinyl" cx="56" cy="56" r="46" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3a3550"/><stop offset="1" stop-color="#1c1a2a"/></radialGradient>
+<linearGradient id="ls_label" x1="44" y1="44" x2="68" y2="68" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ff9ad5"/><stop offset="1" stop-color="#b45ce6"/></linearGradient>
+<radialGradient id="ls_clock" cx="90" cy="86" r="30" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ffe08a"/><stop offset="0.65" stop-color="#ffb347"/><stop offset="1" stop-color="#e9822a"/></radialGradient>
+<filter id="ls_sh" x="-20%" y="-20%" width="140%" height="150%" color-interpolation-filters="sRGB"><feDropShadow dx="0" dy="3" stdDeviation="3.5" flood-color="#0b0a14" flood-opacity="0.45"/></filter>
+<filter id="ls_lift" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB"><feDropShadow dx="0" dy="2.5" stdDeviation="2.5" flood-color="#3b2205" flood-opacity="0.5"/></filter>
+</defs>
+<g filter="url(#ls_sh)">
+<circle cx="56" cy="56" r="46" fill="url(#ls_vinyl)"/>
+<circle cx="56" cy="56" r="45" stroke="#b9b3d9" stroke-opacity="0.55" stroke-width="2"/>
+<circle cx="56" cy="56" r="38" stroke="#ffffff" stroke-opacity="0.08" stroke-width="2"/>
+<circle cx="56" cy="56" r="30" stroke="#ffffff" stroke-opacity="0.08" stroke-width="2"/>
+<path d="M24 40 A36 36 0 0 1 44 22" stroke="#ffffff" stroke-opacity="0.35" stroke-width="3" stroke-linecap="round"/>
+<circle cx="56" cy="56" r="15" fill="url(#ls_label)"/>
+<circle cx="56" cy="56" r="3" fill="#1c1a2a"/>
+</g>
+<g filter="url(#ls_lift)">
+<circle cx="90" cy="88" r="27" fill="white"/>
+<circle cx="90" cy="88" r="24" fill="url(#ls_clock)"/>
+<path d="M90 74 V88 L100 94" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

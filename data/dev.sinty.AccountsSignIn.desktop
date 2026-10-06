@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Online Accounts
+Comment=Sign in to an online account
+Icon=singularity-account-generic
+Exec=singularity-accounts-signin
+NoDisplay=true
+Terminal=false

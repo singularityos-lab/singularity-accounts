@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Online Account Drives
+Comment=Shows the files of online accounts as folders
+Exec=@libexecdir@/singularity-cloud-mount
+NoDisplay=true
+OnlyShowIn=Singularity;
+X-GNOME-Autostart-enabled=true

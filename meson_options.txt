@@ -1,0 +1,2 @@
+option('oauth_clients_file', type: 'string', value: '/etc/singularity/oauth-clients.json',
+  description: 'OAuth client file read at configure time and built into the accounts service as the default clients')
