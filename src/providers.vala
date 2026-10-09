@@ -38,6 +38,7 @@ namespace Singularity.AccountsDaemon {
         public const string GOOGLE_VIDEOS_SCOPE = "https://www.googleapis.com/auth/youtube.readonly";
         public const string MICROSOFT_MAIL_SCOPES = "offline_access https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send";
         public const string MICROSOFT_GRAPH_SCOPES = "offline_access openid email profile https://graph.microsoft.com/User.Read https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/Contacts.ReadWrite https://graph.microsoft.com/Tasks.ReadWrite https://graph.microsoft.com/Files.ReadWrite";
+        public const string MICROSOFT_GRAPH_FILES_SHARED_SCOPES = "https://graph.microsoft.com/Files.ReadWrite.All https://graph.microsoft.com/Sites.Read.All";
         public const string MICROSOFT_GRAPH_MAIL_SCOPES = "https://graph.microsoft.com/Mail.ReadWrite https://graph.microsoft.com/Mail.Send https://graph.microsoft.com/MailboxSettings.ReadWrite";
         public const string MICROSOFT_GRAPH_MAIL_SHARED_SCOPES = "https://graph.microsoft.com/Mail.ReadWrite.Shared https://graph.microsoft.com/Mail.Send.Shared";
         public const string MICROSOFT_GRAPH_SHARED_SCOPES = "https://graph.microsoft.com/Calendars.ReadWrite.Shared https://graph.microsoft.com/Contacts.ReadWrite.Shared";
@@ -166,6 +167,11 @@ namespace Singularity.AccountsDaemon {
             foreach (string s in (mail ? MICROSOFT_GRAPH_MAIL_SHARED_SCOPES : MICROSOFT_GRAPH_SHARED_SCOPES).split(" ")) {
                 if (microsoft_granted(granted, s)) sb.append(" ").append(s);
             }
+            if (!mail) {
+                foreach (string s in MICROSOFT_GRAPH_FILES_SHARED_SCOPES.split(" ")) {
+                    if (microsoft_granted(granted, s)) sb.append(" ").append(s);
+                }
+            }
             return sb.str;
         }
 
@@ -292,7 +298,7 @@ namespace Singularity.AccountsDaemon {
                 return sb.str;
             }
             string scopes = MICROSOFT_GRAPH_SCOPES + " " + MICROSOFT_GRAPH_MAIL_SCOPES + " " + MICROSOFT_GRAPH_MAIL_SHARED_SCOPES + " "
-                + MICROSOFT_GRAPH_SHARED_SCOPES + " https://graph.microsoft.com/Files.ReadWrite.AppFolder";
+                + MICROSOFT_GRAPH_SHARED_SCOPES + " " + MICROSOFT_GRAPH_FILES_SHARED_SCOPES + " https://graph.microsoft.com/Files.ReadWrite.AppFolder";
             if (capabilities != null && MICROSOFT_IMAP_FALLBACK in capabilities) scopes += " https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send";
             return scopes;
         }

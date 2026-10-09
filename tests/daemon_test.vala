@@ -157,6 +157,12 @@ void test_provider_defaults() {
     check(mail_refresh.contains("https://graph.microsoft.com/Mail.ReadWrite.Shared") && !mail_refresh.contains("Mail.Send.Shared"), "Graph Mail refresh keeps the granted shared mailbox scope");
     string graph_refresh = Providers.scopes_for("microsoft", "graph", partly);
     check(graph_refresh.contains("Calendars.ReadWrite.Shared") && !graph_refresh.contains("Contacts.ReadWrite.Shared") && !graph_refresh.contains("Mail."), "Graph refresh keeps only its granted shared scopes");
+    check(!graph_refresh.contains("Files.ReadWrite.All") && !graph_refresh.contains("Sites.Read.All"), "existing accounts do not expand storage consent during refresh");
+    string storage_grants = "Files.ReadWrite.All https://graph.microsoft.com/Sites.Read.All";
+    string storage_refresh = Providers.scopes_for("microsoft", "graph", storage_grants);
+    check(storage_refresh.contains("Files.ReadWrite.All") && storage_refresh.contains("Sites.Read.All"), "Graph refresh keeps shared storage grants");
+    check(!Providers.scopes_for("microsoft", "graph-mail", storage_grants).contains("Files."), "Graph Mail refresh excludes storage grants");
+    check(Providers.consent_scopes("microsoft").contains("Files.ReadWrite.All") && Providers.consent_scopes("microsoft").contains("Sites.Read.All"), "sign-in requests access to shared storage");
     var m = new AccountRecord();
     m.provider = "microsoft";
     m.auth = "oauth2";
