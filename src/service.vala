@@ -506,6 +506,10 @@ namespace Singularity.AccountsDaemon {
                 caps += "videos";
                 r.endpoints["music-api"] = "webdav";
                 r.endpoints["videos-api"] = "webdav";
+                if (caps_reply.status == 200 && caps_reply.body.contains("\"spreed\"")) {
+                    caps += "chat";
+                    r.endpoints["chat-api"] = "talk";
+                }
             }
             r.capabilities = caps;
             if (r.display_name != "") r.display_name = "%s (%s)".printf(r.display_name, Providers.host_of(r.server));

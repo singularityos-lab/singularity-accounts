@@ -36,6 +36,8 @@ namespace Singularity.AccountsDaemon {
         public const string GOOGLE_BASE_SCOPES = "openid email profile";
         public const string SPOTIFY_SCOPES = "user-read-private user-library-read playlist-read-private playlist-read-collaborative user-read-playback-state user-modify-playback-state user-read-currently-playing";
         public const string GOOGLE_VIDEOS_SCOPE = "https://www.googleapis.com/auth/youtube.readonly";
+        public const string GOOGLE_CHAT_SCOPES = "https://www.googleapis.com/auth/chat.spaces.readonly https://www.googleapis.com/auth/chat.messages https://www.googleapis.com/auth/chat.memberships.readonly https://www.googleapis.com/auth/chat.users.readstate";
+        public const string MICROSOFT_CHAT_SCOPES = "https://graph.microsoft.com/Chat.ReadWrite https://graph.microsoft.com/ChatMessage.Send https://graph.microsoft.com/People.Read https://graph.microsoft.com/User.ReadBasic.All";
         public const string MICROSOFT_MAIL_SCOPES = "offline_access https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send";
         public const string MICROSOFT_GRAPH_SCOPES = "offline_access openid email profile https://graph.microsoft.com/User.Read https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/Contacts.ReadWrite https://graph.microsoft.com/Tasks.ReadWrite https://graph.microsoft.com/Files.ReadWrite";
         public const string MICROSOFT_GRAPH_FILES_SHARED_SCOPES = "https://graph.microsoft.com/Files.ReadWrite.All https://graph.microsoft.com/Sites.Read.All";
@@ -50,11 +52,11 @@ namespace Singularity.AccountsDaemon {
             if (cache != null) return cache;
             cache = {
                 new ProviderInfo("nextcloud", "Nextcloud", _("Calendars, contacts, tasks and files on a Nextcloud server"),
-                    "singularity-account-nextcloud", "login-flow", { "calendar", "contacts", "tasks", "files", "photos", "notes", "music", "videos" }),
+                    "singularity-account-nextcloud", "login-flow", { "calendar", "contacts", "tasks", "files", "photos", "notes", "music", "videos", "chat" }),
                 new ProviderInfo("google", "Google", _("Mail, calendar, contacts, tasks, Drive and Google Photos"),
-                    "singularity-account-google", "oauth2", { "mail", "calendar", "contacts", "tasks", "files", "photos", "videos" }),
+                    "singularity-account-google", "oauth2", { "mail", "calendar", "contacts", "tasks", "files", "photos", "videos", "chat" }),
                 new ProviderInfo("microsoft", "Microsoft", _("Outlook.com and Microsoft 365 mail, calendar, contacts, To Do and OneDrive"),
-                    "singularity-account-microsoft", "oauth2", { "mail", "calendar", "contacts", "tasks", "files", "photos" }),
+                    "singularity-account-microsoft", "oauth2", { "mail", "calendar", "contacts", "tasks", "files", "photos", "chat" }),
                 new ProviderInfo("owncloud", "ownCloud", _("Calendars, contacts, tasks and files on an ownCloud server"),
                     "singularity-account-owncloud", "password", { "calendar", "contacts", "tasks", "files" }),
                 new ProviderInfo("exchange", "Exchange", _("Mail and calendar on an Exchange server in your organization"),
@@ -105,6 +107,7 @@ namespace Singularity.AccountsDaemon {
             if (provider == "microsoft") {
                 if (capability == "mail") return "mail";
                 if (capability == "mail-graph") return "graph-mail";
+                if (capability == "chat") return "graph-chat";
                 return "graph";
             }
             return "default";
@@ -112,6 +115,7 @@ namespace Singularity.AccountsDaemon {
 
         public string scope_for_capability(string provider, string capability) {
             if (provider == "spotify") return SPOTIFY_SCOPES;
+            if (provider == "microsoft") return capability == "chat" ? MICROSOFT_CHAT_SCOPES : "";
             if (provider != "google") return "";
             switch (capability) {
                 case "mail": return "https://mail.google.com/";
@@ -121,6 +125,7 @@ namespace Singularity.AccountsDaemon {
                 case "files": return "https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.appdata";
                 case "photos": return "https://www.googleapis.com/auth/photospicker.mediaitems.readonly https://www.googleapis.com/auth/photoslibrary.appendonly https://www.googleapis.com/auth/photoslibrary.readonly.appcreateddata";
                 case "videos": return GOOGLE_VIDEOS_SCOPE;
+                case "chat": return GOOGLE_CHAT_SCOPES;
                 default: return "";
             }
         }
@@ -136,6 +141,7 @@ namespace Singularity.AccountsDaemon {
         }
 
         public bool needs_consent(string provider, string capability) {
+            if (capability == "chat") return provider == "google" || provider == "microsoft";
             return provider == "google" && capability == "videos";
         }
 
@@ -155,13 +161,17 @@ namespace Singularity.AccountsDaemon {
         public bool granted(AccountRecord r, string capability) {
             if (!needs_consent(r.provider, capability)) return true;
             string scope = scope_for_capability(r.provider, capability);
-            foreach (string s in scope.split(" ")) if (!has_scope(r.endpoint("granted-scopes"), s)) return false;
+            foreach (string s in scope.split(" ")) {
+                bool ok = r.provider == "microsoft" ? microsoft_granted(r.endpoint("granted-scopes"), s) : has_scope(r.endpoint("granted-scopes"), s);
+                if (!ok) return false;
+            }
             return true;
         }
 
         public string scopes_for(string provider, string resource, string granted = "") {
             if (provider == "google") return GOOGLE_SCOPES;
             if (resource == "mail") return MICROSOFT_MAIL_SCOPES;
+            if (resource == "graph-chat") return "offline_access https://graph.microsoft.com/User.Read " + MICROSOFT_CHAT_SCOPES;
             bool mail = resource == "graph-mail";
             var sb = new StringBuilder(mail ? "offline_access " + MICROSOFT_GRAPH_MAIL_SCOPES : MICROSOFT_GRAPH_SCOPES);
             foreach (string s in (mail ? MICROSOFT_GRAPH_MAIL_SHARED_SCOPES : MICROSOFT_GRAPH_SHARED_SCOPES).split(" ")) {
@@ -240,6 +250,23 @@ namespace Singularity.AccountsDaemon {
                 r.endpoints["videos-api"] = "webdav";
                 changed = true;
             }
+            if ((r.provider == "google" || r.provider == "microsoft") && r.auth == "oauth2" && !r.has_capability("chat")) {
+                string[] caps = r.capabilities;
+                caps += "chat";
+                r.capabilities = caps;
+                r.endpoints["chat-api"] = r.provider == "google" ? "google-chat" : "teams";
+                changed = true;
+            }
+            if (r.provider == "nextcloud" && !r.has_capability("chat")) {
+                string[] caps = r.capabilities;
+                caps += "chat";
+                r.capabilities = caps;
+                string[] on = r.enabled;
+                on += "chat";
+                r.enabled = on;
+                r.endpoints["chat-api"] = "talk";
+                changed = true;
+            }
             if (r.provider == "nextcloud" && !r.has_capability("music")) {
                 string[] caps = r.capabilities;
                 caps += "music";
@@ -299,6 +326,7 @@ namespace Singularity.AccountsDaemon {
             }
             string scopes = MICROSOFT_GRAPH_SCOPES + " " + MICROSOFT_GRAPH_MAIL_SCOPES + " " + MICROSOFT_GRAPH_MAIL_SHARED_SCOPES + " "
                 + MICROSOFT_GRAPH_SHARED_SCOPES + " " + MICROSOFT_GRAPH_FILES_SHARED_SCOPES + " https://graph.microsoft.com/Files.ReadWrite.AppFolder";
+            if (capabilities != null && "chat" in capabilities) scopes += " " + MICROSOFT_CHAT_SCOPES;
             if (capabilities != null && MICROSOFT_IMAP_FALLBACK in capabilities) scopes += " https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send";
             return scopes;
         }
@@ -324,6 +352,7 @@ namespace Singularity.AccountsDaemon {
                         d["photos"] = r.server + "/remote.php/dav/photos/" + Uri.escape_string(user, "@", false) + "/";
                         d["photos-api"] = "nextcloud";
                         d["music-api"] = "webdav";
+                        d["chat-api"] = "talk";
                     }
                     break;
                 }
@@ -353,6 +382,8 @@ namespace Singularity.AccountsDaemon {
                         d["photos-api"] = "google";
                         d["youtube"] = "https://www.googleapis.com/youtube/v3/";
                         d["videos-api"] = "youtube";
+                        d["google-chat"] = "https://chat.googleapis.com/v1/";
+                        d["chat-api"] = "google-chat";
                     } else {
                         d["mail-auth"] = "password";
                     }
@@ -375,6 +406,7 @@ namespace Singularity.AccountsDaemon {
                     d["tasks-api"] = "graph";
                     d["files-api"] = "onedrive";
                     d["photos-api"] = "onedrive";
+                    d["chat-api"] = "teams";
                     break;
                 case "spotify":
                     d["spotify-api"] = "https://api.spotify.com/v1/";
