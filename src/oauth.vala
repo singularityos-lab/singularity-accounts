@@ -238,6 +238,28 @@ namespace Singularity.AccountsDaemon {
     }
 
     public class TokenClient : Object {
+        private static async Bytes read_bounded(Soup.Session session, Soup.Message message, int64 limit, int priority, Cancellable? cancellable) throws Error {
+            var stream = yield session.send_async(message, priority, cancellable);
+            if (message.response_headers.get_content_length() > limit) throw new IOError.MESSAGE_TOO_LARGE("The response is too large");
+            var body = new ByteArray();
+            var chunk = new uint8[65536];
+            ssize_t n;
+            while ((n = yield stream.read_async(chunk, priority, cancellable)) > 0) {
+                if (body.len + n > limit) {
+                    try {
+                        stream.close(null);
+                    } catch (Error e) {
+                    }
+                    throw new IOError.MESSAGE_TOO_LARGE("The response is too large");
+                }
+                body.append(chunk[0:(int) n]);
+            }
+            try {
+                stream.close(null);
+            } catch (Error e) {
+            }
+            return ByteArray.free_to_bytes((owned) body);
+        }
         private Soup.Session session;
 
         public TokenClient() {
@@ -262,7 +284,7 @@ namespace Singularity.AccountsDaemon {
             msg.set_request_body_from_bytes("application/x-www-form-urlencoded", new Bytes(form(fields).data));
             Bytes body;
             try {
-                body = yield session.send_and_read_async(msg, Priority.DEFAULT, null);
+                body = yield read_bounded(session, msg, 1024 * 1024, Priority.DEFAULT, null);
             } catch (Error e) {
                 throw new AccountsError.NETWORK(_("Could not reach the sign-in server: %s").printf(e.message));
             }

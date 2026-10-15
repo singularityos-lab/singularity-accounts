@@ -8,6 +8,29 @@ namespace Singularity.AccountsDaemon {
     }
 
     public class HttpProbe : Object {
+        private static async Bytes read_bounded(Soup.Session session, Soup.Message message, int64 limit, int priority, Cancellable? cancellable) throws Error {
+            var stream = yield session.send_async(message, priority, cancellable);
+            if (message.response_headers.get_content_length() > limit) throw new IOError.MESSAGE_TOO_LARGE("The response is too large");
+            var body = new ByteArray();
+            var chunk = new uint8[65536];
+            ssize_t n;
+            while ((n = yield stream.read_async(chunk, priority, cancellable)) > 0) {
+                if (body.len + n > limit) {
+                    try {
+                        stream.close(null);
+                    } catch (Error e) {
+                    }
+                    throw new IOError.MESSAGE_TOO_LARGE("The response is too large");
+                }
+                body.append(chunk[0:(int) n]);
+            }
+            try {
+                stream.close(null);
+            } catch (Error e) {
+            }
+            return ByteArray.free_to_bytes((owned) body);
+        }
+
         private Soup.Session session;
         public bool accept_invalid { get; set; default = false; }
 
@@ -39,7 +62,7 @@ namespace Singularity.AccountsDaemon {
                 if (accept_invalid) msg.accept_certificate.connect(() => true);
                 Bytes data;
                 try {
-                    data = yield session.send_and_read_async(msg, Priority.DEFAULT, null);
+                    data = yield read_bounded(session, msg, 4 * 1024 * 1024, Priority.DEFAULT, null);
                 } catch (Error e) {
                     string host = current;
                     try {
