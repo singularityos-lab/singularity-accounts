@@ -70,6 +70,41 @@ namespace Singularity.AccountsDaemon {
             }
         }
 
+        public bool is_microsoft_login(string uri) {
+            try {
+                string host = (Uri.parse(uri, UriFlags.ENCODED).get_host() ?? "").down();
+                return host == "login.microsoftonline.com" || host == "login.live.com" || host == "login.windows.net";
+            } catch (UriError e) {
+                return false;
+            }
+        }
+
+        public string provider_error(string page_text) {
+            int at = page_text.index_of("AADSTS");
+            if (at < 0) return "";
+            string rest = page_text.substring(at);
+            int end = rest.index_of_char('\n');
+            if (end >= 0) rest = rest.substring(0, end);
+            rest = rest.strip();
+            if (rest.char_count() > 300) rest = rest.substring(0, rest.index_of_nth_char(300)) + "…";
+            return rest;
+        }
+
+        public string error_answer(string authorize_url, string message) {
+            string redirect = redirect_of(authorize_url);
+            if (redirect == "") return "";
+            string state = "";
+            try {
+                string? query = Uri.parse(authorize_url, UriFlags.ENCODED).get_query();
+                if (query != null) state = Uri.parse_params(query, -1, "&", UriParamsFlags.NONE).lookup("state") ?? "";
+            } catch (UriError e) {
+                return "";
+            }
+            if (state == "") return "";
+            return "%s?error=server_error&error_description=%s&state=%s".printf(redirect,
+                Uri.escape_string(message, null, false), Uri.escape_string(state, null, false));
+        }
+
         private bool mentions_block(string text) {
             string t = text.down();
             return t.contains("disallowed_useragent") || t.contains("disallowed useragent");

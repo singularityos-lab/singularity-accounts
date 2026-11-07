@@ -532,6 +532,20 @@ void test_redirect_match() {
     check(!Redirect.is_blocked("https://accounts.google.com/o/oauth2/v2/auth?client_id=x&scope=email"), "normal sign-in page");
 }
 
+void test_microsoft_error_page() {
+    check(Redirect.is_microsoft_login("https://login.microsoftonline.com/contoso.onmicrosoft.com/oauth2/v2.0/authorize?x=1"), "tenant login page");
+    check(Redirect.is_microsoft_login("https://login.live.com/oauth20_authorize.srf"), "personal login page");
+    check(!Redirect.is_microsoft_login("https://evil.example/login.microsoftonline.com"), "other host");
+    string page = "Sign in\nSorry, but we're having trouble signing you in.\nAADSTS700016: Application with identifier 'abc' was not found in the directory 'Contoso'.\nTroubleshooting details";
+    check(Redirect.provider_error(page) == "AADSTS700016: Application with identifier 'abc' was not found in the directory 'Contoso'.", "error line extracted");
+    check(Redirect.provider_error("Pick an account\nUse another account") == "", "normal page has no error");
+    string url = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=x&redirect_uri=http%3A%2F%2Flocalhost%3A5555%2F&state=S9&scope=openid";
+    string answer = Redirect.error_answer(url, "AADSTS65001: The user or administrator has not consented");
+    check(Redirect.is_redirect(answer, "http://localhost:5555/"), "answer goes to the redirect");
+    check(parse_or_error(answer, "http://localhost:5555/", "S9") == "provider-error", "answer fails the sign-in with the provider error");
+    check(Redirect.error_answer("https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=x", "e") == "", "no redirect, no answer");
+}
+
 void test_photos_upgrade() {
     var google = new AccountRecord();
     google.provider = "google";
@@ -955,6 +969,7 @@ int main(string[] args) {
     Test.add_func("/accounts-daemon/client-priority", test_client_priority);
     Test.add_func("/accounts-daemon/redirect-paste", test_redirect_paste);
     Test.add_func("/accounts-daemon/redirect-match", test_redirect_match);
+    Test.add_func("/accounts-daemon/microsoft-error-page", test_microsoft_error_page);
     Test.add_func("/accounts-daemon/photos-upgrade", test_photos_upgrade);
     Test.add_func("/accounts-daemon/media-providers", test_media_providers);
     Test.add_func("/accounts-daemon/media-capabilities", test_media_capabilities);

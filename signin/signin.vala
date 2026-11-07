@@ -64,6 +64,10 @@ namespace Singularity.AccountsSignIn {
                 if (local_flow && handed_over && ev == WebKit.LoadEvent.FINISHED) {
                     done = true;
                     close();
+                    return;
+                }
+                if (ev == WebKit.LoadEvent.FINISHED && !handed_over && web.uri != null && Redirect.is_microsoft_login(web.uri)) {
+                    check_provider_error.begin();
                 }
             });
             web.load_failed.connect((ev, uri, error) => {
@@ -148,6 +152,28 @@ namespace Singularity.AccountsSignIn {
                 return true;
             }
             return false;
+        }
+
+        private async void check_provider_error() {
+            string text;
+            try {
+                var value = yield web.evaluate_javascript("document.body ? document.body.innerText : ''", -1, null, null, null);
+                text = value.to_string();
+            } catch (GLib.Error e) {
+                return;
+            }
+            string message = Redirect.provider_error(text);
+            if (message == "" || handed_over) return;
+            string answer = Redirect.error_answer(start_url, message);
+            if (answer == "") {
+                show_status("dialog-error", _("Sign-In Failed"), message, false);
+                return;
+            }
+            if (local_flow) {
+                web.load_uri(answer);
+            } else {
+                yield hand_over(answer);
+            }
         }
 
         private async void hand_over(string uri) {
