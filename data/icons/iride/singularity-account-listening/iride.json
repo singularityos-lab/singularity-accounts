@@ -1,0 +1,124 @@
+{
+ "format": 1,
+ "canvas": [
+  128,
+  128
+ ],
+ "box": [
+  10,
+  10,
+  117,
+  115
+ ],
+ "stack": [
+  {
+   "layer": "layers/000.svg",
+   "piece": "disc"
+  },
+  {
+   "layer": "layers/001.svg",
+   "piece": "clock"
+  }
+ ],
+ "motion": [
+  {
+   "piece": "disc",
+   "origin": [
+    56.0,
+    56.0
+   ],
+   "tracks": [
+    {
+     "kind": "rotate",
+     "from": [
+      -360
+     ],
+     "at": 0,
+     "duration": 780,
+     "ease": "out"
+    },
+    {
+     "kind": "opacity",
+     "from": [
+      1
+     ],
+     "at": 800,
+     "duration": 75,
+     "ease": "linear"
+    }
+   ]
+  },
+  {
+   "piece": "clock",
+   "origin": [
+    90.0,
+    88.0
+   ],
+   "tracks": [
+    {
+     "kind": "rotate",
+     "from": [
+      -16.0
+     ],
+     "at": 240,
+     "duration": 80,
+     "ease": "linear"
+    },
+    {
+     "kind": "rotate",
+     "from": [
+      29.71429
+     ],
+     "at": 320,
+     "duration": 80,
+     "ease": "linear"
+    },
+    {
+     "kind": "rotate",
+     "from": [
+      -25.14286
+     ],
+     "at": 400,
+     "duration": 80,
+     "ease": "linear"
+    },
+    {
+     "kind": "rotate",
+     "from": [
+      20.57143
+     ],
+     "at": 480,
+     "duration": 80,
+     "ease": "linear"
+    },
+    {
+     "kind": "rotate",
+     "from": [
+      -16.0
+     ],
+     "at": 560,
+     "duration": 80,
+     "ease": "linear"
+    },
+    {
+     "kind": "rotate",
+     "from": [
+      11.42857
+     ],
+     "at": 640,
+     "duration": 80,
+     "ease": "linear"
+    },
+    {
+     "kind": "rotate",
+     "from": [
+      -4.57143
+     ],
+     "at": 720,
+     "duration": 80,
+     "ease": "linear"
+    }
+   ]
+  }
+ ]
+}

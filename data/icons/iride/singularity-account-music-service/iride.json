@@ -1,0 +1,133 @@
+{
+ "format": 1,
+ "canvas": [
+  128,
+  128
+ ],
+ "box": [
+  10,
+  26,
+  118,
+  112
+ ],
+ "stack": [
+  {
+   "layer": "layers/000.svg",
+   "piece": "headphones"
+  }
+ ],
+ "motion": [
+  {
+   "piece": "headphones",
+   "origin": [
+    64.0,
+    108.0
+   ],
+   "tracks": [
+    {
+     "kind": "rotate",
+     "from": [
+      -11.0
+     ],
+     "at": 0,
+     "duration": 110,
+     "ease": "linear"
+    },
+    {
+     "kind": "rotate",
+     "from": [
+      20.16667
+     ],
+     "at": 110,
+     "duration": 110,
+     "ease": "linear"
+    },
+    {
+     "kind": "rotate",
+     "from": [
+      -16.5
+     ],
+     "at": 220,
+     "duration": 110,
+     "ease": "linear"
+    },
+    {
+     "kind": "rotate",
+     "from": [
+      12.83333
+     ],
+     "at": 330,
+     "duration": 110,
+     "ease": "linear"
+    },
+    {
+     "kind": "rotate",
+     "from": [
+      -9.16667
+     ],
+     "at": 440,
+     "duration": 110,
+     "ease": "linear"
+    },
+    {
+     "kind": "rotate",
+     "from": [
+      3.66667
+     ],
+     "at": 550,
+     "duration": 110,
+     "ease": "linear"
+    },
+    {
+     "kind": "translate",
+     "from": [
+      0,
+      5.12
+     ],
+     "at": 0,
+     "duration": 100,
+     "ease": "out"
+    },
+    {
+     "kind": "translate",
+     "from": [
+      0,
+      -5.12
+     ],
+     "at": 100,
+     "duration": 100,
+     "ease": "linear"
+    },
+    {
+     "kind": "translate",
+     "from": [
+      0,
+      3.84
+     ],
+     "at": 260,
+     "duration": 100,
+     "ease": "out"
+    },
+    {
+     "kind": "translate",
+     "from": [
+      0,
+      -3.84
+     ],
+     "at": 360,
+     "duration": 100,
+     "ease": "linear"
+    },
+    {
+     "kind": "opacity",
+     "from": [
+      1
+     ],
+     "at": 660,
+     "duration": 75,
+     "ease": "linear"
+    }
+   ]
+  }
+ ]
+}

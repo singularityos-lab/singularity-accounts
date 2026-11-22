@@ -139,3 +139,49 @@ install_data(files(
     'data/icons/singularity-account-music-service-symbolic.svg',
   ),
   install_dir: get_option('datadir') / 'icons' / 'hicolor' / 'scalable' / 'apps')
+
+iride = find_program('iride', required: get_option('iride'))
+if iride.found()
+  custom_target('iride-icon-singularity-account-listening',
+    input: 'data/icons/iride/singularity-account-listening/iride.json',
+    output: 'singularity-account-listening.iride',
+    depend_files: files(
+      'data/icons/iride/singularity-account-listening/layers/000.svg',
+      'data/icons/iride/singularity-account-listening/layers/001.svg',
+    ),
+    command: [iride, 'build', meson.current_source_dir() / 'data' / 'icons' / 'iride' / 'singularity-account-listening', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('datadir') / 'icons' / 'hicolor' / 'scalable' / 'apps'
+  )
+endif
+
+if iride.found()
+  custom_target('iride-icon-singularity-account-media-server',
+    input: 'data/icons/iride/singularity-account-media-server/iride.json',
+    output: 'singularity-account-media-server.iride',
+    depend_files: files(
+      'data/icons/iride/singularity-account-media-server/layers/000.svg',
+      'data/icons/iride/singularity-account-media-server/layers/001.svg',
+      'data/icons/iride/singularity-account-media-server/layers/parte-0.svg',
+      'data/icons/iride/singularity-account-media-server/layers/parte-1.svg',
+      'data/icons/iride/singularity-account-media-server/layers/parte-2.svg',
+      'data/icons/iride/singularity-account-media-server/layers/parte-3.svg',
+    ),
+    command: [iride, 'build', meson.current_source_dir() / 'data' / 'icons' / 'iride' / 'singularity-account-media-server', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('datadir') / 'icons' / 'hicolor' / 'scalable' / 'apps'
+  )
+endif
+
+if iride.found()
+  custom_target('iride-icon-singularity-account-music-service',
+    input: 'data/icons/iride/singularity-account-music-service/iride.json',
+    output: 'singularity-account-music-service.iride',
+    depend_files: files(
+      'data/icons/iride/singularity-account-music-service/layers/000.svg',
+    ),
+    command: [iride, 'build', meson.current_source_dir() / 'data' / 'icons' / 'iride' / 'singularity-account-music-service', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('datadir') / 'icons' / 'hicolor' / 'scalable' / 'apps'
+  )
+endif
