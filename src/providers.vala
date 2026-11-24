@@ -57,6 +57,8 @@ namespace Singularity.AccountsDaemon {
                     "singularity-account-google", "oauth2", { "mail", "calendar", "contacts", "tasks", "files", "photos", "videos", "chat" }),
                 new ProviderInfo("microsoft", "Microsoft", _("Outlook.com and Microsoft 365 mail, calendar, contacts, To Do and OneDrive"),
                     "singularity-account-microsoft", "oauth2", { "mail", "calendar", "contacts", "tasks", "files", "photos", "chat" }),
+                new ProviderInfo("sinty", _("Organization"), _("Your organization's Sinty account: files on Sinty Cloud and device administration"),
+                    "singularity-account-generic", "oauth2", { "files", "devices" }),
                 new ProviderInfo("owncloud", "ownCloud", _("Calendars, contacts, tasks and files on an ownCloud server"),
                     "singularity-account-owncloud", "password", { "calendar", "contacts", "tasks", "files" }),
                 new ProviderInfo("exchange", "Exchange", _("Mail and calendar on an Exchange server in your organization"),
@@ -314,6 +316,7 @@ namespace Singularity.AccountsDaemon {
         }
 
         public string consent_scopes(string provider, string[]? capabilities = null) {
+            if (provider == "sinty") return "openid profile";
             if (provider == "spotify") return SPOTIFY_SCOPES;
             if (provider == "google") {
                 if (capabilities == null) return GOOGLE_SCOPES;

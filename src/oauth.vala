@@ -31,6 +31,7 @@ namespace Singularity.AccountsDaemon {
         }
 
         private static string defaults_auth(string provider) {
+            if (provider == "sinty") return "";
             if (provider == "spotify") return "https://accounts.spotify.com/authorize";
             return provider == "google"
                 ? "https://accounts.google.com/o/oauth2/v2/auth"
@@ -38,6 +39,7 @@ namespace Singularity.AccountsDaemon {
         }
 
         private static string defaults_token(string provider) {
+            if (provider == "sinty") return "";
             if (provider == "spotify") return "https://accounts.spotify.com/api/token";
             return provider == "google"
                 ? "https://oauth2.googleapis.com/token"
@@ -114,6 +116,7 @@ namespace Singularity.AccountsDaemon {
         public static OAuthClient load(string provider) {
             var client = new OAuthClient();
             client.provider = provider;
+            if (provider == "sinty") client.client_id = SINTY_CLIENT;
             client.auth_uri = defaults_auth(provider);
             client.token_uri = defaults_token(provider);
             if (!user_only(provider)) {
@@ -121,6 +124,63 @@ namespace Singularity.AccountsDaemon {
                 foreach (string p in system_paths()) apply_file(client, p);
             }
             apply_file(client, user_path());
+            return client;
+        }
+
+        public const string SINTY_CLIENT = "desktop";
+
+        public static bool local_address(string url) {
+            return url.has_prefix("http://127.0.0.1:") || url.has_prefix("http://localhost:") || url == "http://127.0.0.1" || url == "http://localhost";
+        }
+
+        public static async OAuthClient discover_sinty(string issuer) throws AccountsError {
+            if (!issuer.has_prefix("https://") && !local_address(issuer)) {
+                throw new AccountsError.INVALID(_("The organization address must start with https://"));
+            }
+            var reply = yield new HttpProbe().request("GET", issuer + "/.well-known/openid-configuration", null);
+            if (reply.status == 404) throw new AccountsError.PROTOCOL(_("%s is not a Sinty organization").printf(Providers.host_of(issuer)));
+            if (reply.status != 200) throw new AccountsError.PROTOCOL(_("The organization answered HTTP %u").printf(reply.status));
+            var client = load("sinty");
+            try {
+                var parser = new Json.Parser();
+                parser.load_from_data(reply.body);
+                var root = parser.get_root();
+                if (root == null || root.get_node_type() != Json.NodeType.OBJECT) throw new AccountsError.PROTOCOL("");
+                var o = root.get_object();
+                if (str(o, "issuer") != issuer) throw new AccountsError.PROTOCOL(_("%s answered for another organization").printf(Providers.host_of(issuer)));
+                client.auth_uri = str(o, "authorization_endpoint");
+                client.token_uri = str(o, "token_endpoint");
+                foreach (string u in new string[] { client.auth_uri, client.token_uri }) {
+                    if (!u.has_prefix(issuer + "/")) throw new AccountsError.PROTOCOL(_("%s sent sign-in addresses outside the organization").printf(Providers.host_of(issuer)));
+                }
+                client.endpoints["issuer"] = issuer;
+                client.endpoints["auth-uri"] = client.auth_uri;
+                client.endpoints["token-uri"] = client.token_uri;
+                client.endpoints["client-id"] = client.client_id;
+                if (o.has_member("sinty_services") && o.get_member("sinty_services").get_node_type() == Json.NodeType.OBJECT) {
+                    var services = o.get_object_member("sinty_services");
+                    string cloud = str(services, "cloud");
+                    if (cloud.has_prefix("https://") || local_address(cloud)) {
+                        client.endpoints["sinty-cloud"] = cloud;
+                        client.endpoints["files-api"] = "sinty-cloud";
+                    }
+                    string it = str(services, "it");
+                    if (it.has_prefix("https://") || local_address(it)) client.endpoints["sinty-it"] = it;
+                }
+            } catch (AccountsError e) {
+                throw e;
+            } catch (Error e) {
+                throw new AccountsError.PROTOCOL(_("%s is not a Sinty organization").printf(Providers.host_of(issuer)));
+            }
+            return client;
+        }
+
+        public static OAuthClient for_account(string provider, Gee.Map<string, string> endpoints) {
+            var client = load(provider);
+            if (provider != "sinty") return client;
+            client.auth_uri = endpoints["auth-uri"] ?? "";
+            client.token_uri = endpoints["token-uri"] ?? "";
+            if ((endpoints["client-id"] ?? "") != "") client.client_id = endpoints["client-id"];
             return client;
         }
 

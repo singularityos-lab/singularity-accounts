@@ -142,7 +142,7 @@ namespace Singularity.AccountsDaemon {
                     mark_attention(r, "reauth");
                     throw new AccountsError.NEEDS_REAUTH(_("Sign in to %s again in Settings").printf(r.identity));
                 }
-                var client = OAuthConfig.load(r.provider);
+                var client = OAuthConfig.for_account(r.provider, r.endpoints);
                 if (!client.configured) throw new AccountsError.NOT_CONFIGURED(_("This system has no registration for %s sign-in").printf(r.provider));
                 TokenSet ts;
                 try {
@@ -624,7 +624,13 @@ namespace Singularity.AccountsDaemon {
             string reauth = setting(settings, "account");
             AccountRecord? existing = reauth != "" ? require(reauth) : null;
             SignInFlow flow;
-            if (provider == "google" || provider == "microsoft" || provider == "spotify") {
+            if (provider == "sinty") {
+                string issuer = Providers.normalize_server(setting(settings, "server", existing != null ? existing.server : ""));
+                if (issuer == "") throw new AccountsError.INVALID(_("Enter the address of your organization"));
+                var oauth = new OAuthFlow(provider, yield OAuthConfig.discover_sinty(issuer));
+                oauth.acr = setting(settings, "acr");
+                flow = oauth;
+            } else if (provider == "google" || provider == "microsoft" || provider == "spotify") {
                 var oauth = new OAuthFlow(provider, OAuthConfig.load(provider));
                 if (provider == "google" || provider == "microsoft") oauth.capabilities = wanted_capabilities(provider, settings, existing);
                 flow = oauth;
@@ -709,7 +715,8 @@ namespace Singularity.AccountsDaemon {
         }
 
         private async string finish_oauth(SignInFlow flow, SignInResult result) throws AccountsError {
-            var client = OAuthConfig.load(flow.provider);
+            var oauth_flow = flow as OAuthFlow;
+            var client = oauth_flow != null ? oauth_flow.client : OAuthConfig.load(flow.provider);
             AccountRecord? r = null;
             if (flow.reauth_id != "") {
                 r = require(flow.reauth_id);
@@ -732,6 +739,18 @@ namespace Singularity.AccountsDaemon {
                 r.capabilities = info.capabilities;
                 r.enabled = Providers.default_capabilities(flow.provider);
                 Providers.apply_defaults(r, client);
+            }
+            if (flow.provider == "sinty") {
+                r.server = client.endpoints["issuer"] ?? r.server;
+                foreach (string k in new string[] { "sinty-cloud", "files-api", "sinty-it" }) r.endpoints.unset(k);
+                foreach (var e in client.endpoints.entries) r.endpoints[e.key] = e.value;
+                string[] offered = {};
+                if (r.endpoints.has_key("sinty-cloud")) offered += "files";
+                if (r.endpoints.has_key("sinty-it")) offered += "devices";
+                r.capabilities = offered;
+                string[] on = {};
+                foreach (string c in offered) if (created || c in r.enabled) on += c;
+                r.enabled = on;
             }
             if (flow.provider == "spotify" && result.server != "") r.endpoints["spotify-product"] = result.server;
             if (result.tokens != null && result.tokens.scope != "") {

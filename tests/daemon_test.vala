@@ -954,6 +954,70 @@ void test_microsoft_mail_route() {
     loop.run();
 }
 
+async void check_sinty_discovery() throws Error {
+    string body = "";
+    var server = new Soup.Server("server-header", "Organization fixture");
+    server.add_handler("/.well-known/openid-configuration", (srv, message, path, query) => {
+        message.set_status(200, null);
+        message.set_response("application/json", Soup.MemoryUse.COPY, body.data);
+    });
+    server.listen_local(0, Soup.ServerListenOptions.IPV4_ONLY);
+    string issuer = server.get_uris().data.to_string();
+    issuer = issuer.substring(0, issuer.length - 1);
+    string doc(string iss, string auth, string services) {
+        return "{\"issuer\":\"%s\",\"authorization_endpoint\":\"%s\",\"token_endpoint\":\"%s/token\",\"sinty_services\":{%s}}".printf(iss, auth, iss, services);
+    }
+    Error? failure = null;
+    try {
+        body = doc(issuer, issuer + "/authorize", "\"cloud\":\"https://cloud.example\",\"it\":\"http://it.example\"");
+        var client = yield OAuthConfig.discover_sinty(issuer);
+        check(client.client_id == OAuthConfig.SINTY_CLIENT && client.auth_uri == issuer + "/authorize" && client.token_uri == issuer + "/token", "discovery fills the sign-in addresses");
+        check(client.endpoints["sinty-cloud"] == "https://cloud.example" && client.endpoints["files-api"] == "sinty-cloud", "the cloud service becomes the files endpoint");
+        check(!client.endpoints.has_key("sinty-it"), "a plain http service on another host is ignored");
+        var r = new AccountRecord();
+        r.provider = "sinty";
+        foreach (var e in client.endpoints.entries) r.endpoints[e.key] = e.value;
+        var again = OAuthConfig.for_account("sinty", r.endpoints);
+        check(again.token_uri == issuer + "/token" && again.client_id == OAuthConfig.SINTY_CLIENT, "a stored account refreshes against its own organization");
+        string[] refusals = {
+            doc("https://elsewhere.example", issuer + "/authorize", ""),
+            doc(issuer, "https://phish.example/authorize", ""),
+        };
+        foreach (string bad in refusals) {
+            body = bad;
+            bool refused = false;
+            try {
+                yield OAuthConfig.discover_sinty(issuer);
+            } catch (AccountsError.PROTOCOL e) {
+                refused = true;
+            }
+            check(refused, "a discovery document for another place is refused");
+        }
+        bool insecure = false;
+        try {
+            yield OAuthConfig.discover_sinty("http://id.example.org");
+        } catch (AccountsError.INVALID e) {
+            insecure = true;
+        }
+        check(insecure, "an organization over plain http is refused");
+        check(Providers.consent_scopes("sinty") == "openid profile", "the organization asks only for the sign-in");
+    } catch (Error e) {
+        failure = e;
+    }
+    server.disconnect();
+    if (failure != null) throw failure;
+}
+
+void test_sinty_discovery() {
+    var loop = new MainLoop();
+    check_sinty_discovery.begin((obj, res) => {
+        try { check_sinty_discovery.end(res); }
+        catch (Error e) { check(false, e.message); }
+        loop.quit();
+    });
+    loop.run();
+}
+
 int main(string[] args) {
     Test.init(ref args);
     Test.add_func("/accounts-daemon/pkce", test_pkce_rfc7636_vector);
@@ -975,5 +1039,6 @@ int main(string[] args) {
     Test.add_func("/accounts-daemon/media-capabilities", test_media_capabilities);
     Test.add_func("/accounts-daemon/microsoft-mail-route", test_microsoft_mail_route);
     Test.add_func("/accounts-daemon/refresh-migrates-mail", test_refresh_migrates);
+    Test.add_func("/accounts-daemon/sinty-discovery", test_sinty_discovery);
     return Test.run();
 }

@@ -52,6 +52,7 @@ namespace Singularity.AccountsDaemon {
     public class OAuthFlow : SignInFlow {
         public OAuthClient client { get; construct; }
         public string[]? capabilities { get; set; default = null; }
+        public string acr { get; set; default = ""; }
         private Soup.Server? server;
         private string state = "";
         private string verifier = "";
@@ -95,6 +96,8 @@ namespace Singularity.AccountsDaemon {
                 p.insert("include_granted_scopes", "true");
             } else if (provider == "spotify") {
                 p.insert("show_dialog", "true");
+            } else if (provider == "sinty") {
+                if (acr != "") p.insert("acr_values", acr);
             } else {
                 p.insert("response_mode", "query");
                 p.insert("prompt", "select_account");
@@ -175,6 +178,9 @@ namespace Singularity.AccountsDaemon {
                 result.identity = tokens.identity();
                 result.display_name = tokens.display_name();
                 result.secret = tokens.refresh_token;
+                if (provider == "sinty" && result.identity != "" && !result.identity.contains("@")) {
+                    result.identity += "@" + Providers.host_of(client.endpoints["issuer"] ?? client.auth_uri);
+                }
                 if (provider == "spotify") yield MediaProviders.spotify_identity(client, tokens.access_token, result);
                 if (result.identity == "") throw new AccountsError.PROTOCOL(_("The provider did not say which account signed in"));
                 finish(result, "");
